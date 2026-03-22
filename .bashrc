@@ -485,3 +485,69 @@ PROMPT_COMMAND=__set_ps1
 
 alias vscode2='"/mnt/c/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/code"'
 
+# >>> clip helpers >>>
+# Copy stdin to the system clipboard using the first available backend.
+# Prefer WSL/Windows first, then common Linux/macOS tools.
+__copy_to_clipboard() {
+  if command -v clip.exe >/dev/null 2>&1; then
+    clip.exe
+    return
+  fi
+
+  if command -v wl-copy >/dev/null 2>&1; then
+    wl-copy
+    return
+  fi
+
+  if command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard
+    return
+  fi
+
+  if command -v pbcopy >/dev/null 2>&1; then
+    pbcopy
+    return
+  fi
+
+  echo "No clipboard backend found" >&2
+  return 1
+}
+
+# Print a file to screen and copy the same content to clipboard.
+__copy_file_to_clipboard() {
+  local file="$1"
+
+  [[ -f "$file" ]] || {
+    echo "Missing file: $file" >&2
+    return 1
+  }
+
+  cat "$file"
+  __copy_to_clipboard <"$file"
+}
+
+# Copy the last 10 lines of /tmp/output_last.txt to clipboard
+# and print the same content to screen.
+out2clip() {
+  local src="/tmp/output_last.txt"
+  local tmp
+
+  [[ -f "$src" ]] || {
+    echo "Missing file: $src" >&2
+    return 1
+  }
+
+  tmp="$(mktemp)"
+  tail -10 "$src" >"$tmp"
+  __copy_file_to_clipboard "$tmp"
+  rm -f "$tmp"
+}
+
+# Copy the whole /tmp/output_last.txt to clipboard
+# and print the same content to screen.
+out2clipfull() {
+  local src="/tmp/output_last.txt"
+  __copy_file_to_clipboard "$src"
+}
+# <<< clip helpers <<<
+

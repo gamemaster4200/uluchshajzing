@@ -482,3 +482,6 @@ PROMPT_MODE=std
 
 # Rebuild prompt before every render.
 PROMPT_COMMAND=__set_ps1
+
+alias vscode2='"/mnt/c/Users/Admin/AppData/Local/Programs/Microsoft VS Code/bin/code"'
+

@@ -369,16 +369,23 @@ __prompt_elapsed() {
   printf '%ss' "$elapsed"
 }
 
+# Reset terminal color right before command output starts.
+# This lets the typed command stay green, while program output
+# goes back to the terminal default unless the program colors it.
+PS0='\[\e[0m\]'
+
 # Standard one-line prompt.
 # Inside git:
 # - repo-relative path
 # - git ref
 # - dirty marker
 # - exit code only if previous command failed
+# - leave terminal in green after "$ " so the typed command is green
 #
 # Outside git:
 # - short working dir only
 # - exit code only if previous command failed
+# - same green typed-command behavior after "$ "
 __set_prompt_std() {
   local exit_code=$1
   local path ref dirty
@@ -388,16 +395,13 @@ __set_prompt_std() {
   dirty="$(__prompt_git_dirty)"
 
   PS1="\[\e[1;96m\]${path}\[\e[0m\]"
-
   if [[ -n "$ref" ]]; then
     PS1+="\[\e[1;93m\](${ref}${dirty})\[\e[0m\]"
   fi
-
   if (( exit_code != 0 )); then
     PS1+=" \[\e[1;91m\]!${exit_code}\[\e[0m\]"
   fi
-
-  PS1+='\$ '
+  PS1+='\$ \[\e[0;32m\]'
 }
 
 # Extended two-line prompt.
@@ -417,8 +421,9 @@ __set_prompt_std() {
 #   [venv:myenv]
 #   [env:test]
 #
-# This keeps the main line short while giving you telemetry
-# for debugging, testing, and post-mortem archaeology.
+# After the final "$ " leave terminal in green so the typed
+# command is green. Actual command output is reset to default
+# by PS0 right before execution starts.
 __set_prompt_x() {
   local exit_code=$1
   local path ref dirty elapsed histno ctx
@@ -431,19 +436,15 @@ __set_prompt_x() {
   ctx="$(__prompt_context)"
 
   PS1="\[\e[1;96m\]${path}\[\e[0m\]"
-
   if [[ -n "$ref" ]]; then
     PS1+="\[\e[1;93m\](${ref}${dirty})\[\e[0m\]"
   fi
-
   PS1+='\n'
   PS1+="\[\e[1;95m\][${exit_code}|${elapsed}|${histno}]\[\e[0m\]"
-
   if [[ -n "$ctx" ]]; then
     PS1+=" \[\e[1;94m\][${ctx}]\[\e[0m\]"
   fi
-
-  PS1+='\$ '
+  PS1+='\$ \[\e[0;32m\]'
 }
 
 # Dispatcher.
@@ -550,6 +551,21 @@ out2clipfull() {
   __copy_file_to_clipboard "$src"
 }
 # <<< clip helpers <<<
+
+
+
+# taxi_trac dev commands: start / stop / restart
+export PATH="/home/dmin/devel/taxi_trac/bin:$PATH"
+
+# Save original prompt once.
+__ORIG_PS1="${__ORIG_PS1:-$PS1}"
+
+# Keep the existing prompt, but make the typed command green.
+# Reset color before command execution so output stays default.
+if [ -n "${BASH_VERSION:-}" ]; then
+  PS1="${__ORIG_PS1}\[\e[0;32m\]"
+  PS0='\[\e[0m\]'
+fi
 
 # win2wsl — конвертирует Windows-путь в WSL-путь
 # Использование: ls "$(win2wsl 'C:\Users\Admin\My Docs')"

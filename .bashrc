@@ -551,3 +551,10 @@ out2clipfull() {
 }
 # <<< clip helpers <<<
 
+# win2wsl — конвертирует Windows-путь в WSL-путь
+# Использование: ls "$(win2wsl 'C:\Users\Admin\My Docs')"
+win2wsl() {
+    echo "$1" | sed \
+        's|^\([A-Za-z]\):\\|/mnt/\L\1/|;  # C:\ → /mnt/c/
+         s|\\|/|g'                          # все \ → /
+}

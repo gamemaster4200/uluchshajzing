@@ -601,3 +601,5 @@ win2wsl() {
         's|^\([A-Za-z]\):\\|/mnt/\L\1/|;  # C:\ → /mnt/c/
          s|\\|/|g'                          # все \ → /
 }
+
+alias agy='/mnt/c/Users/Admin/AppData/Local/Programs/Antigravity/_/bin/antigravity'

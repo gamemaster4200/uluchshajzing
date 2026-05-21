@@ -250,11 +250,11 @@ PROMPT_COMMAND=__set_ps1
 #   ~/tmp$
 #
 # Extended mode inside git:
-#   uluchshajzing/apps(main*)
+#   (.venv) uluchshajzing/apps(main*)
 #   [0|12s|154] [ctx:seed-demo]$
 #
 # Extended mode outside git:
-#   ~/tmp
+#   (.venv) ~/tmp
 #   [0|12s|154]$
 #
 # ps1  -> standard one-line prompt
@@ -315,26 +315,33 @@ __prompt_git_dirty() {
   }
 }
 
-# Build optional extra context for the extended prompt.
-# Priority is intentional:
-# 1. PROMPT_ENV set manually by you
-# 2. Python venv / conda
-# 3. Generic app/node env vars
+# Build Python environment prefix for the prompt.
+# Standard shell convention is to show an active Python env
+# as "(name)" before the rest of the prompt.
 #
-# So manual context wins over auto-detected noise.
-__prompt_context() {
-  if [[ -n "${PROMPT_ENV:-}" ]]; then
-    printf 'ctx:%s' "$PROMPT_ENV"
-    return
-  fi
-
+# Prefer venv first, then conda.
+__prompt_python_env() {
   if [[ -n "${VIRTUAL_ENV:-}" ]]; then
-    printf 'venv:%s' "$(basename "$VIRTUAL_ENV")"
+    printf '%s' "$(basename "$VIRTUAL_ENV")"
     return
   fi
 
   if [[ -n "${CONDA_DEFAULT_ENV:-}" ]]; then
-    printf 'conda:%s' "$CONDA_DEFAULT_ENV"
+    printf '%s' "$CONDA_DEFAULT_ENV"
+    return
+  fi
+}
+
+# Build optional extra context for the extended prompt.
+# Priority is intentional:
+# 1. PROMPT_ENV set manually by you
+# 2. Generic app/node env vars
+#
+# Python venv/conda are shown separately as a prompt prefix,
+# because that is the conventional place for them.
+__prompt_context() {
+  if [[ -n "${PROMPT_ENV:-}" ]]; then
+    printf 'ctx:%s' "$PROMPT_ENV"
     return
   fi
 
@@ -376,6 +383,7 @@ PS0='\[\e[0m\]'
 
 # Standard one-line prompt.
 # Inside git:
+# - optional Python env prefix: (.venv)
 # - repo-relative path
 # - git ref
 # - dirty marker
@@ -383,18 +391,26 @@ PS0='\[\e[0m\]'
 # - leave terminal in green after "$ " so the typed command is green
 #
 # Outside git:
+# - optional Python env prefix: (.venv)
 # - short working dir only
 # - exit code only if previous command failed
 # - same green typed-command behavior after "$ "
 __set_prompt_std() {
   local exit_code=$1
-  local path ref dirty
+  local path ref dirty pyenv
 
   path="$(__prompt_repo_path)"
   ref="$(__prompt_git_ref)"
   dirty="$(__prompt_git_dirty)"
+  pyenv="$(__prompt_python_env)"
 
-  PS1="\[\e[1;96m\]${path}\[\e[0m\]"
+  PS1=''
+
+  if [[ -n "$pyenv" ]]; then
+    PS1+="\[\e[1;92m\](${pyenv})\[\e[0m\] "
+  fi
+
+  PS1+="\[\e[1;96m\]${path}\[\e[0m\]"
   if [[ -n "$ref" ]]; then
     PS1+="\[\e[1;93m\](${ref}${dirty})\[\e[0m\]"
   fi
@@ -407,26 +423,30 @@ __set_prompt_std() {
 # Extended two-line prompt.
 #
 # First line inside git:
+# - optional Python env prefix: (.venv)
 # - repo-relative path
 # - git ref
 # - dirty marker
 #
 # First line outside git:
+# - optional Python env prefix: (.venv)
 # - short working dir only
 #
 # Second line always exists, both inside and outside git:
 # - [exit|duration|history_number]
 # - optional extra context:
 #   [ctx:seed-demo]
-#   [venv:myenv]
 #   [env:test]
+#
+# Python venv/conda are not repeated on the second line:
+# they already live in the conventional prompt-prefix spot.
 #
 # After the final "$ " leave terminal in green so the typed
 # command is green. Actual command output is reset to default
 # by PS0 right before execution starts.
 __set_prompt_x() {
   local exit_code=$1
-  local path ref dirty elapsed histno ctx
+  local path ref dirty elapsed histno ctx pyenv
 
   path="$(__prompt_repo_path)"
   ref="$(__prompt_git_ref)"
@@ -434,8 +454,15 @@ __set_prompt_x() {
   elapsed="$(__prompt_elapsed)"
   histno="$(history 1 | awk '{print $1}')"
   ctx="$(__prompt_context)"
+  pyenv="$(__prompt_python_env)"
 
-  PS1="\[\e[1;96m\]${path}\[\e[0m\]"
+  PS1=''
+
+  if [[ -n "$pyenv" ]]; then
+    PS1+="\[\e[1;92m\](${pyenv})\[\e[0m\] "
+  fi
+
+  PS1+="\[\e[1;96m\]${path}\[\e[0m\]"
   if [[ -n "$ref" ]]; then
     PS1+="\[\e[1;93m\](${ref}${dirty})\[\e[0m\]"
   fi
